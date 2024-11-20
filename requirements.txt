@@ -2,3 +2,13 @@ requests
 opencv-python
 pyinstaller
 python-dotenv
+pyscreenshot
+pillow
+keyboard
+pygetwindow
+imutils
+numpy
+pywin32
+psutil
+py-cpuinfo
+GPUtil
