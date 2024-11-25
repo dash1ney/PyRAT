@@ -1,7 +1,7 @@
 import cv2
 
 
-def screenshot():
+def take_photo():
     cap = cv2.VideoCapture(0)
 
     if not cap.isOpened():

