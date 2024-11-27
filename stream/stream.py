@@ -15,7 +15,6 @@ class Stream:
 
     def start(self):
         exit = False
-        print('start')
 
         while not exit:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -33,7 +32,6 @@ class Stream:
                         exit = True
                         break
             except Exception as e:
-                print('ошибка', e)
                 sock.close()
                 continue
 

