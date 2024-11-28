@@ -1,6 +1,6 @@
 requests
 opencv-python
-pyinstaller
+nuitka
 python-dotenv
 pyscreenshot
 pillow
@@ -11,4 +11,4 @@ numpy
 pywin32
 psutil
 py-cpuinfo
-GPUtil
+#GPUtil ( distutils needed - Deprecated since version 3.10, removed in version 3.12. )
